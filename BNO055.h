@@ -1,6 +1,8 @@
 #ifndef BNO055_h
 #define BNO055_h
 
+#include "Arduino.h"
+
 class BNO055{
 	public:
 		BNO055();
@@ -43,17 +45,20 @@ class BNO055{
 			
 			BNO_UNIT_SET                                    = 0x3B,
 			
+			BNO_OPR_MODE                                    = 0x3D,
+			
 		} BNO_Register;
 		
 		void ReadRPY(float*, float*, float*);
 		void ReadAccelRaw(float*, float*, float*);
 		void ReadGyroRaw(float*, float*, float*);
 		void ReadMagRaw(float*, float*, float*);
+		void initialize();
 		
 		
 	private:
 		//Address of the BNO in i2c communications
-		const byte BNO_ADDRESS = 0x28;
+		static const byte BNO_ADDRESS = 0x28;
 		void setPage(int);
 		void writeByte(BNO_Register, byte);
 		byte readByte(BNO_Register);
@@ -65,7 +70,7 @@ class BNO055{
 			bool DPS;
 			bool MPS;
 		} settings;
-}
+};
 
 
 

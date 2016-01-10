@@ -1,14 +1,18 @@
 
 #include "Arduino.h"
 
-#include "Wire.h"
+#include <Wire.h>
 
 #include "BNO055.h"
 
 BNO055::BNO055(){
+}
+
+void BNO055::initialize(){
 	Wire.begin();
 	setPage(0);
 	setUnits(true, true, true, true, true);
+	writeByte(BNO_OPR_MODE, 0b00001100);
 }
 
 void BNO055::setPage(int page){
@@ -35,14 +39,15 @@ void BNO055::ReadRPY(float* roll, float* pitch, float* yaw){
 	int16_t y = yaw_LSB | (yaw_MSB<<8);
 	
 	if(settings.Degrees){
-		roll = (float)r/16;
-		pitch = (float)p/16;
-		yaw = (float)y/16;
+		*roll = (float)r/16;
+		*pitch = (float)p/16;
+		*yaw = (float)y/16;
 	}else{
-		roll = (float)r/900;
-		pitch = (float)p/900;
-		yaw = (float)y/900;
+		*roll = (float)r/900;
+		*pitch = (float)p/900;
+		*yaw = (float)y/900;
 	}
+	
 }
 
 void BNO055::ReadAccelRaw(float* accel_x, float* accel_y, float* accel_z){
@@ -60,13 +65,13 @@ void BNO055::ReadAccelRaw(float* accel_x, float* accel_y, float* accel_z){
 	int16_t z = z_LSB | (z_MSB<<8);
 	
 	if(settings.MPS){
-		accel_x = (float)x/100;
-		accel_y = (float)y/100;
-		accel_z = (float)z/100;
+		*accel_x = (float)x/100;
+		*accel_y = (float)y/100;
+		*accel_z = (float)z/100;
 	}else{
-		accel_x = (float)x;
-		accel_y = (float)y;
-		accel_z = (float)z;
+		*accel_x = (float)x;
+		*accel_y = (float)y;
+		*accel_z = (float)z;
 	}
 }
 
@@ -85,13 +90,13 @@ void BNO055::ReadGyroRaw(float* gyro_x, float* gyro_y, float* gyro_z){
 	int16_t z = z_LSB | (z_MSB<<8);
 	
 	if(settings.MPS){
-		gyro_x = (float)x/16;
-		gyro_y = (float)y/16;
-		gyro_z = (float)z/16;
+		*gyro_x = (float)x/16;
+		*gyro_y = (float)y/16;
+		*gyro_z = (float)z/16;
 	}else{
-		gyro_x = (float)x/900;
-		gyro_y = (float)y/900;
-		gyro_z = (float)z/900;
+		*gyro_x = (float)x/900;
+		*gyro_y = (float)y/900;
+		*gyro_z = (float)z/900;
 	}
 }
 
@@ -109,23 +114,23 @@ void BNO055::ReadMagRaw(float* mag_x, float* mag_y, float* mag_z){
 	int16_t y = y_LSB | (y_MSB<<8);
 	int16_t z = z_LSB | (z_MSB<<8);
 	
-	mag_x = (float)x/16;
-	mag_y = (float)y/16;
-	mag_z = (float)z/16;
+	*mag_x = (float)x/16;
+	*mag_y = (float)y/16;
+	*mag_z = (float)z/16;
 }
 
-void BNO055:writeByte(BNO_Register reg, byte value){
-	Wire.beginTransmission(BNO_ADRESS);
+void BNO055::writeByte(BNO_Register reg, byte value){
+	Wire.beginTransmission(BNO_ADDRESS);
 	Wire.write((uint8_t) reg);
 	Wire.write((uint8_t) value);
 	Wire.endTransmission();
 }
 
 byte BNO055::readByte(BNO_Register reg){
-	Wire.beginTransmission(BNO_ADRESS);
+	Wire.beginTransmission(BNO_ADDRESS);
 	Wire.write((uint8_t) reg);
 	Wire.endTransmission();
-	Wire.requestFrom(BNO_ADRESS, 1);
+	Wire.requestFrom((uint8_t)BNO_ADDRESS, (uint8_t)1);
 	return Wire.read();
 }
 
@@ -154,5 +159,5 @@ void BNO055::setUnits(bool Windows, bool Celsius, bool Degrees, bool DPS, bool M
 		values &= 0b00000001;
 	}
 	
-	writeByte(BNO_UNIT_SEL, values);	
+	writeByte(BNO_UNIT_SET, values);	
 }

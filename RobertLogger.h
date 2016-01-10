@@ -1,21 +1,20 @@
 #ifndef RobertLogger_h
 #define RobertLogger_h
 
-#if (ARDUINO >= 100)
- #include "Arduino.h"
-#else
- #include "WProgram.h"
-#endif
+#include "Arduino.h"
 
 #include "BNO055.h"
+#include "BMP180.h"
 
-
+#include <SPI.h>
+#include <SD.h>
+#include <String.h>
 
 typedef struct{
 	float roll;
 	float pitch;
 	float yaw;
-	float altitude;
+	double altitude;
 } IMUFusedData;
 
 typedef struct{
@@ -28,8 +27,13 @@ typedef struct{
 	float mag_x;
 	float mag_y;
 	float mag_z;
-	float pressure;
+	double pressure;
 } IMURawData;
+
+typedef struct{
+	IMUFusedData fused;
+	IMURawData raw;
+} IMUData;
 
 class RobertLogger{
 	public:
@@ -37,11 +41,19 @@ class RobertLogger{
 		bool initialize();
 		IMUFusedData readFusedData();
 		IMURawData readRawData();
+		IMUData readAllData();
+		void initializeFiles();
+		void baselinePressure();
+		void LogData(IMUFusedData, IMURawData);
+		void LogData(IMUFusedData);
 		
 	private:
 		BNO055 bno;
+		BMP180 bmp;
+		char dataName[8];
+		static void floatToString(char*, float, int);
 		
-}
+};
 
 
 
