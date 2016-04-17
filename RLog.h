@@ -1,10 +1,10 @@
-#ifndef RobertLogger_h
-#define RobertLogger_h
+#ifndef RLog_h
+#define RLog_h
 
 #include "Arduino.h"
 
 #include "BNO055.h"
-#include "BMP180.h"
+#include "BME280.h"
 
 #include <SPI.h>
 #include <SD.h>
@@ -15,6 +15,7 @@ typedef struct{
 	float pitch;
 	float yaw;
 	double altitude;
+	double temperature;
 } IMUFusedData;
 
 typedef struct{
@@ -35,23 +36,24 @@ typedef struct{
 	IMURawData raw;
 } IMUData;
 
-class RobertLogger{
+class RLog{
 	public:
-		RobertLogger();
+		RLog();
 		bool initialize();
-		IMUFusedData readFusedData();
-		IMURawData readRawData();
-		IMUData readAllData();
+		void readFusedData(IMUFusedData*);
+		void readRawData(IMURawData*);
+		void readAllData(IMUData*);
 		void initializeFiles();
 		void baselinePressure();
-		void LogData(IMUFusedData, IMURawData);
-		void LogData(IMUFusedData);
+		void LogData(IMUFusedData*, IMURawData*);
+		void LogData(IMUFusedData*);
 		
 	private:
 		BNO055 bno;
-		BMP180 bmp;
+		BME280 bme;
 		char dataName[8];
-		static void floatToString(char*, float, int);
+		//File dataFile;
+		static int floatToString(char*, float, int);
 		
 };
 
