@@ -51,6 +51,8 @@ void BME280::initialize(){
 	
 	writeByte(0xF4, 0x6F);
 	
+	delay(3000); //Give time for start up
+	
 	takeBaselineReading();
 }
 
@@ -69,14 +71,27 @@ byte BME280::readByte(byte reg){
 	return Wire.read();
 }
 
+void BME280::readMultiple(byte reg, byte* buffer, uint8_t numBytes){
+	Wire.beginTransmission(BME_ADDRESS);
+	Wire.write((uint8_t) reg);
+	Wire.endTransmission();
+	Wire.requestFrom((uint8_t)BME_ADDRESS, (uint8_t)numBytes);
+	
+	for(int i=0; i<numBytes; i++){
+		buffer[i] = Wire.read();
+	}
+}
+
 void BME280::takeBaselineReading(){
 	getTemperature();
 	baselinePressure = getPressure();
 }
 
 double BME280::getTemperature(){
+	uint8_t rawData[3];
+	readMultiple(0xFA, (uint8_t*)rawData, 3);
 	//Return temperature in degrees C
-	int32_t adc_T = ((uint32_t)readByte(0xFA) <<12) |((uint32_t)readByte(0xFB)<<4) | (((uint32_t)readByte(0xFC)>>4)&0x0F);
+	int32_t adc_T = ((uint32_t)rawData[0] <<12) |((uint32_t)rawData[1]<<4) | (((uint32_t)rawData[2]>>4)&0x0F);
 	
 	int32_t var1, var2;
 	
@@ -96,8 +111,10 @@ double BME280::getTemperature(){
 double BME280::getPressure(){
 	//Returns pressure in Pa
 	//Must call getTemperature before calling
+	uint8_t rawData[3];
+	readMultiple(0xF7, (uint8_t*)rawData, 3);
 	
-	int32_t adc_P = ((uint32_t)readByte(0xF7) <<12) |((uint32_t)readByte(0xF8)<<4) | (((uint32_t)readByte(0xF9)>>4)&0x0F);
+	int32_t adc_P = ((uint32_t)rawData[0] <<12) |((uint32_t)rawData[1]<<4) | (((uint32_t)rawData[2]>>4)&0x0F);
 	
 	int64_t var1, var2, p;
 	var1 = ((int64_t)t_fine) - 128000;

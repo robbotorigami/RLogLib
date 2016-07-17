@@ -41,15 +41,27 @@ class BNO055{
 			BNO_YAW_LSB                                     = 0x1A,
 			BNO_YAW_MSB                                     = 0x1B,
 			
+			//Registers for quaternion data
+			BNO_QUATW_LSB									= 0x20,
+			BNO_QUATW_MSB									= 0x21,
+			BNO_QUATX_LSB									= 0x22,
+			BNO_QUATX_MSB									= 0x23,
+			BNO_QUATY_LSB									= 0x24,
+			BNO_QUATY_MSB									= 0x25,
+			BNO_QUATZ_LSB									= 0x26,
+			BNO_QUATZ_MSB									= 0x27,
+			
 			BNO_PAGE_REG                                    = 0x07,
 			
 			BNO_UNIT_SET                                    = 0x3B,
 			
 			BNO_OPR_MODE                                    = 0x3D,
+			BNO_INT_EN										= 0x10,
 			
 		} BNO_Register;
 		
 		void ReadRPY(float*, float*, float*);
+		void ReadQuaternion(float*, float*, float*, float*);
 		void ReadAccelRaw(float*, float*, float*);
 		void ReadGyroRaw(float*, float*, float*);
 		void ReadMagRaw(float*, float*, float*);
@@ -62,6 +74,7 @@ class BNO055{
 		void setPage(int);
 		void writeByte(BNO_Register, byte);
 		byte readByte(BNO_Register);
+		void readMultiple(BNO_Register, byte*, int);
 		void setUnits(bool, bool, bool, bool, bool);
 		struct{
 			bool Windows;

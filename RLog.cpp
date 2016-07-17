@@ -1,50 +1,87 @@
 
+
 #include "Arduino.h"
 
 #include "RLog.h"
-RLog::RLog(){
+RLog::RLog(RLogMode modein):
+	mode(modein)
+{
 	bno = BNO055();
 	bme = BME280();
+	numAltEvents = 0;
 }
 
 bool RLog::initialize(){
+	//TODO check for correct initialization of BNO and BME
 	bno.initialize();
 	bme.initialize();
-	if(!SD.begin(10)){
+	
+	pinMode(10, OUTPUT);
+	digitalWrite(10, HIGH);
+	
+	if(!sd.begin(10, SPI_FULL_SPEED)){
 		return false;
 	}
 	
 	return true;
+	
 }
 
 void RLog::initializeFiles(){
 	int i = 0;
 	sprintf(dataName, "data%i.csv", i);
-	while(SD.exists(dataName)){
+	while(sd.exists(dataName)){
 		i++;
 		sprintf(dataName, "data%i.csv", i);
 	}
-	File dataFile = SD.open(dataName, FILE_WRITE);
-	dataFile.print("Millis,Roll,Pitch,Yaw,Altitude,Temperature,AccelX,AccelY,AccelZ,GyroX,GyroY,GyroZ,MagX,MagY,MagZ,Pressure\n");
-	dataFile.close();
+	dataFile.open(dataName, O_CREAT | O_WRITE | O_EXCL);
+	switch(mode){
+		case RLOG_EULER:
+			dataFile.print("Millis,Roll,Pitch,Yaw,Unused,Altitude,Temperature,AccelX,AccelY,AccelZ,GyroX,GyroY,GyroZ,MagX,MagY,MagZ,Pressure\n");
+			break;
+		case RLOG_QUATERNION:
+			dataFile.print("Millis,X,Y,Z,W,Altitude,Temperature,AccelX,AccelY,AccelZ,GyroX,GyroY,GyroZ,MagX,MagY,MagZ,Pressure\n");
+			break;
+	}
+	//dataFile.close();
+}
+
+
+void RLog::handleEvents(){
+	static double prevAlt = 0;
+	double currAlt = bme.getAltitude(bme.getPressure());
+	for(int i = 0; i < numAltEvents; i++){
+		if(altitudeEvents[i].direction == UP){
+			if(currAlt > altitudeEvents[i].altitude && prevAlt < altitudeEvents[i].altitude)
+				(*altitudeEvents[i].function)();
+		}else{
+			if(currAlt < altitudeEvents[i].altitude && prevAlt > altitudeEvents[i].altitude)
+				(*altitudeEvents[i].function)();
+		}
+	}
+	prevAlt = currAlt;
+	
+}
+void RLog::addAltitudeEvent(void (*function)(void), float altitude, uint8_t direction){
+	altitudeEvents[numAltEvents].function = function;
+	altitudeEvents[numAltEvents].altitude = altitude;
+	altitudeEvents[numAltEvents].direction = direction;
+	numAltEvents++;
 }
 
 void RLog::LogData(IMUFusedData* fusedData, IMURawData* rawData){
-	File dataFile = SD.open(dataName, FILE_WRITE);
-	unsigned long mill = millis();
-	
-	/*
 	char bufferString[200];
-	char convBuffer[20];
 	char* buffer = bufferString;
 	
-	buffer += sprintf(buffer, "%d", mill);
+	buffer += sprintf(buffer, "%lu,", millis());
 	
-	buffer += floatToString(buffer, fusedData->roll, 3);
+	buffer += floatToString(buffer, fusedData->datax, 3);
 	*(buffer++) = ',';
-	buffer += floatToString(buffer, fusedData->pitch, 3);
+	buffer += floatToString(buffer, fusedData->datay, 3);
 	*(buffer++) = ',';
-	buffer += floatToString(buffer, fusedData->yaw, 3);
+	buffer += floatToString(buffer, fusedData->dataz, 3);
+	*(buffer++) = ',';
+	buffer += floatToString(buffer, fusedData->dataw, 3);
 	*(buffer++) = ',';
 	buffer += floatToString(buffer, fusedData->altitude, 3);
 	*(buffer++) = ',';
@@ -73,79 +110,47 @@ void RLog::LogData(IMUFusedData* fusedData, IMURawData* rawData){
 	*(buffer++) = ',';
 	
 	buffer += floatToString(buffer, rawData->pressure, 3);
-	sprintf(buffer, "\n");
+	buffer += sprintf(buffer, "\n");
 	
-	dataFile.print(buffer);
-	dataFile.close();
-	*/
-	
-	
-	dataFile.print(mill);
-	dataFile.print(",");
-	dataFile.print(fusedData->roll);
-	dataFile.print(",");
-	dataFile.print(fusedData->pitch);
-	dataFile.print(",");
-	dataFile.print(fusedData->yaw);
-	dataFile.print(",");
-	dataFile.print(fusedData->altitude);
-	dataFile.print(",");
-	dataFile.print(fusedData->temperature);
-	dataFile.print(",");
-	
-	
-	dataFile.print(rawData->accel_x);
-	dataFile.print(",");
-	dataFile.print(rawData->accel_y);
-	dataFile.print(",");
-	dataFile.print(rawData->accel_z);
-	dataFile.print(",");
-	
-	dataFile.print(rawData->gyro_x);
-	dataFile.print(",");
-	dataFile.print(rawData->gyro_y);
-	dataFile.print(",");
-	dataFile.print(rawData->gyro_z);
-	dataFile.print(",");
-	
-	dataFile.print(rawData->mag_x);
-	dataFile.print(",");
-	dataFile.print(rawData->mag_y);
-	dataFile.print(",");
-	dataFile.print(rawData->mag_z);
-	dataFile.print(",");
-	
-	dataFile.print(rawData->pressure);
-	dataFile.print("\n");
-	dataFile.close();
-	
+	dataFile.print(bufferString);
+	dataFile.sync();	
 }
 
 void RLog::LogData(IMUFusedData *fusedData){
+	char bufferString[200];
+	char* buffer = bufferString;
 	
-	File dataFile = SD.open(dataName, FILE_WRITE);
-	unsigned long mill = millis();
+	buffer += sprintf(buffer, "%lu,", millis());
 	
-	dataFile.print(mill);
-	dataFile.print(",");
-	dataFile.print(fusedData->roll);
-	dataFile.print(",");
-	dataFile.print(fusedData->pitch);
-	dataFile.print(",");
-	dataFile.print(fusedData->yaw);
-	dataFile.print(",");
-	dataFile.print(fusedData->altitude);
-	dataFile.print(",");
-	dataFile.print(fusedData->temperature);
-	dataFile.print("\n");
-	dataFile.close();
+	buffer += floatToString(buffer, fusedData->datax, 3);
+	*(buffer++) = ',';
+	buffer += floatToString(buffer, fusedData->datay, 3);
+	*(buffer++) = ',';
+	buffer += floatToString(buffer, fusedData->dataz, 3);
+	*(buffer++) = ',';
+	buffer += floatToString(buffer, fusedData->dataw, 3);
+	*(buffer++) = ',';
+	buffer += floatToString(buffer, fusedData->altitude, 3);
+	*(buffer++) = ',';
+	buffer += floatToString(buffer, fusedData->temperature, 3);
+	*(buffer++) = ',';
+	buffer += sprintf(buffer, "\n");
+	
+	dataFile.print(bufferString);
+	dataFile.flush();
 	
 	
 }
 
-void RLog::readFusedData(IMUFusedData * currentData){
-	
-	bno.ReadRPY(&currentData->roll, &currentData->pitch, &currentData->yaw);
+void RLog::readFusedData(IMUFusedData* currentData){
+	switch(mode){
+		case RLOG_EULER:
+			bno.ReadRPY(&currentData->datax, &currentData->datay, &currentData->dataz);
+			break;
+		case RLOG_QUATERNION:
+			bno.ReadQuaternion(&currentData->datax, &currentData->datay, &currentData->dataz, &currentData->dataw);
+			break;
+	}
 	double Temperature = bme.getTemperature();
 	double Pressure = bme.getPressure();
 	currentData->temperature = Temperature;

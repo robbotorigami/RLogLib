@@ -27,6 +27,8 @@ void loop() {
   board.readFusedData(&currentData);
   board.readRawData(&currentRawData);
   board.LogData(&currentData, &currentRawData);
+  
+  board.handleEvents();
 
   
   
